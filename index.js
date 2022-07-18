@@ -4,55 +4,43 @@ const colorsContainer = document.getElementById('colors-container')
 
 document.getElementById('color-form').addEventListener("submit", (e) => {
     e.preventDefault()
-    getColor()
+    getPalette()
 })
 
-function getColor() {
-    const baseURL = `https://www.thecolorapi.com/scheme?hex=${seed.value.substring(1)}&mode=${mode.value}`
-    fetch(baseURL)
-        .then(res => res.json())
-        .then(data => {
-            const colorsHex = new Array
-            const colorsArray = data.colors
-            colorsArray.map(color => {
-                colorsHex.push(color.hex.value)
+async function getPalette(){
+    try {
+
+        const colorsArray = await getColorsArray(seed.value.substring(1), mode.value)
+        const colorsHtml = colorsArray.map( colorObj => {
+            return getColorHtml(colorObj.hex.clean)
+        }).join('')
+        colorsContainer.innerHTML = colorsHtml
+
+        const colorsAndContainers = Array.from(document.getElementsByClassName('clickable'))
+        colorsAndContainers.map( div => {
+            div.addEventListener('click', (e) => {
+                const colorHash = '#' + e.target.classList[1]
+                navigator.clipboard.writeText(colorHash)
             })
-            let colorHtml = ''
-            for (const [index, color] of colorsHex.entries()) {
-                colorHtml += `
-                    <div class="color-container">
-                        <div class="color-expo" id='color-expo-${index}' style="background-color:${color}"></div>
-                        <p class="color-hex" id='color-name-${index}'>${color}</p>
-                    </div>
-                `
-            }
-            colorsContainer.innerHTML = colorHtml
-            const colorDivs = document.getElementsByClassName('color-container')
-            for (const div of colorDivs){
-                const preHex = div.innerHTML.indexOf('#')
-                div.addEventListener("click", () => {
-                    navigator.clipboard.writeText(div.innerHTML.slice(preHex+1, preHex+7))
-                    .then(function() {
-                        alert("Hex code copied! 🤩")
-                    })
-                })
-            }
         })
-            // colorDivs.map( div => div.addEventListener("click", () => {
-            //     navigator.permissions.query({name: "clipboard-write"}).then(result => {
-            //       if (result.state == "granted" || result.state == "prompt") {
-            //         console.log(div.innerHTML)
-            //       }
-            //     })
-            // }))
+
+    } catch (e) {
+        console.log(e)
+    }
 }
 
+async function getColorsArray(color, mode) {
+    const response = await fetch (`https://www.thecolorapi.com/scheme?hex=${color}&mode=${mode}`)
+    const data = await response.json()
+    return data.colors
+}
 
+function getColorHtml(color) {
+    return `
+    <div class='clickable color-container'>
+        <div class='color-expo ${color}' style='background-color:#${color}'></div>
+        <p class='color-hex ${color}' >#${color}</p>
+    </div>`
+}
 
-getColor()
-
-// navigator.permissions.query({name: "clipboard-write"}).then(result => {
-//   if (result.state == "granted" || result.state == "prompt") {
-//     /* write to the clipboard now */
-//   }
-// })
+getPalette()
